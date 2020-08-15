@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <ezTime.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
 #include <ESP8266HTTPClient.h>
@@ -13,7 +12,11 @@
 #define WIFI_PASS  "your-password"
 #endif
 
-#define SERVER_HOSTNAME "ec2-3-106-166-215.ap-southeast-2.compute.amazonaws.com"
+#define SERVER "http://ec2-3-106-166-215.ap-southeast-2.compute.amazonaws.com:8080"
+
+uint32_t currentTime = 0;
+int lastSync = 0; 
+int lastUpdate = 0;
 
 struct tagData {
   uint64_t GUID;
@@ -36,25 +39,15 @@ struct tagData datum1;
 bool ledStatus = !ledActive;
 #define ledPin D0
 
+void updateTime();
+
 void setup(void) {
   pinMode(ledPin, ledStatus);
 
   Serial.begin(115200);
   while (!Serial) {}
 
-  WiFi.mode(WIFI_STA);
-  WiFiMulti.addAP(WIFI_SSID, WIFI_PASS);
-
-  while ((WiFiMulti.run() != WL_CONNECTED)) {
-    ledStatus = !ledStatus;
-    digitalWrite(ledPin, ledStatus);
-    delay(50);
-  }
   nfc.begin();
-
-  // Turn LEDs off
-  ledStatus = !ledActive;
-  digitalWrite(ledPin, ledStatus);
 
   uint32_t versiondata = nfc.getFirmwareVersion();
   if (! versiondata) {
@@ -68,7 +61,25 @@ void setup(void) {
   
   // configure board to read RFID tags
   nfc.SAMConfig();
+
+
+  // Connect to WiFi
+  WiFi.mode(WIFI_STA);
+  WiFiMulti.addAP(WIFI_SSID, WIFI_PASS);
+
+  while ((WiFiMulti.run() != WL_CONNECTED)) {
+    ledStatus = !ledStatus;
+    digitalWrite(ledPin, ledStatus);
+    delay(50);
+  }
   
+
+  updateTime();
+
+  // Turn LEDs off
+  ledStatus = !ledActive;
+  digitalWrite(ledPin, ledStatus);
+
   Serial.println("Waiting for an ISO14443A Card ...");
 
 }
@@ -128,20 +139,58 @@ void loop(void) {
       }
       WiFiClient client;
       HTTPClient http;
-      // http.begin(client, "http://" SERVER_HOSTNAME ":8080/");
-      // http.addHeader("Content-Type", "text/csv");
+      http.begin(client, SERVER);
+      http.addHeader("Content-Type", "text/csv");
       char toSend[104];
-      uint32_t current_time = 0;
-      sprintf(toSend, "%032.18u,%032.18u", current_time, datum1.GUID);
+      int sensorUID = random(1,5);
+      Serial.println("time, sensor UID, item UID,               UPC, store longitude, store latitude,     purchase time");
+      sprintf(toSend, "%11lu,%11u,%9llu,%18llu,%16f,%15f,%18u", currentTime, sensorUID, datum1.GUID, datum1.UPC, datum1.longitude, datum1.latitude, datum1.purchaseTime);
       Serial.println(toSend);
-      // http.POST()
-      int httpCode = http.POST("{\"hello\":\"world\"}");
-
+      int httpCode = http.POST(toSend);
+      if(httpCode > 0) {
+        // file found at server
+        if (httpCode == HTTP_CODE_OK) {
+          const String& payload = http.getString();
+          Serial.println("received payload:\n<<");
+          Serial.println(payload);
+          Serial.println(">>");
+        }
+      }
+      http.end();
     }
     else {
       Serial.println("This doesn't seem to be an NTAG203 tag (UUID length != 7 bytes)!");
     }
-    delay(1000);
+    delay(250);
   }
+  if(millis() - lastUpdate > 1000) {
+    currentTime++;
+    lastUpdate = millis();
+  }
+  if(millis() - lastSync > 10*1000) {
+    updateTime();
+  }
+
 }
 
+void updateTime() {
+  WiFiClient client;
+  HTTPClient http;
+  if (http.begin(client, SERVER)) {
+    int httpCode = http.GET();
+    if (httpCode > 0) {
+      if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+        Serial.print("New epoch: ");
+        String payload = http.getString();
+        currentTime = payload.toInt();
+        lastSync = millis();
+        lastUpdate = millis();
+        Serial.println(payload);
+
+      }
+    } else {
+      Serial.printf("Setting time failed, error: %s\n", http.errorToString(httpCode).c_str());
+    }
+    http.end();
+  }
+}
