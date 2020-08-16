@@ -94,14 +94,11 @@ def get_m_app_data(request):
 def get_sensors(request):
     DBConn = sqlite3.connect(DBF)
     c = DBConn.cursor()
-    c.execute("SELECT UDID, Location, Make, Model FROM Sensor_Information")
+    c.execute("SELECT Sensor_UID, Longitude, Latitude, Make, Model, Collection_Type FROM Sensor_Information")
     sensors = c.fetchall()
-
-    data = c.fetchall()
-
     DBConn.close()
 
-    return json.dumps(data)
+    return json.dumps(sensors)
 
 def get_overall_stats(request):
     DBConn = sqlite3.connect(DBF)
