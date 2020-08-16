@@ -1,4 +1,4 @@
-# GovHack2020
+# Project Clearwater - Team Sanity is Optional's entrance to GovHack 2020.
 
 Our project uses IoT devices to track plastic waste. It comprises of three main parts - an AWS EC2 Instance, smart labels and readers in waterways.
 
