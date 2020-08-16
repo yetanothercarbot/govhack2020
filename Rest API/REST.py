@@ -10,6 +10,7 @@ from flask import Flask, request, url_for, flash, redirect
 import sqlite3
 import time
 import datetime
+import json
 import os
 
 DBF = "Data.db"
@@ -40,6 +41,14 @@ def received_mobile_app():
     else:
         return time.time()
 
+@app.route('/sensorlist', methods=('GET',))
+def received_sensorlist():
+    return get_sensors(request)
+
+@app.route('/api_overall', methods=('GET',))
+def received_api_overall():
+    return get_overall_stats(request)
+
 
 def add_sensor_data_to_database(data:list):
     if len(data) != 7:
@@ -49,7 +58,7 @@ def add_sensor_data_to_database(data:list):
         readingDate, readingTime = tuple(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(data[0]))).split(' '))
         purchaseDate, purchaseTime = tuple(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(data[6]))).split(' '))
         c = DBConn.cursor()
-        c.execute("INSERT INTO Data_From_Readers VALUES ('{}','{}','{}', '{}', '{}', '{}', '{}', '{}', '{}')".format(
+        c.execute("INSERT INTO Data_From_Readers VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (
             readingDate, readingTime, data[1], data[2], data[3], data[4], data[5], purchaseDate, purchaseTime))
         DBConn.commit()
         DBConn.close()
@@ -66,7 +75,7 @@ def add_app_data_into_database(location, data:list):
     try:
         DBConn = sqlite3.connect(DBF)
         c = DBConn.cursor()
-        c.execute("INSERT INTO Data_From_App VALUES ('{}', '{}', '{}', '{}', '{}', '{}')".format(location, data[0], data[1], data[2], data[3], data[4]))
+        c.execute("INSERT INTO Data_From_App VALUES (?, ?, ?, ?, ?, ?)", (location, data[0], data[1], data[2], data[3], data[4]))
         DBConn.commit()
         DBConn.close()
         return "201 Created"
@@ -82,5 +91,33 @@ def get_m_app_data(request):
         data.append(str(request.form[field]))
     return data
 
+def get_sensors(request):
+    DBConn = sqlite3.connect(DBF)
+    c = DBConn.cursor()
+    c.execute("SELECT UDID, Location, Make, Model FROM Sensor_Information")
+    sensors = c.fetchall()
+
+    data = c.fetchall()
+
+    DBConn.close()
+
+    return json.dumps(data)
+
+def get_overall_stats(request):
+    DBConn = sqlite3.connect(DBF)
+    c = DBConn.cursor()
+    c.execute("SELECT count(*) FROM Data_From_Readers")
+    count_all = c.fetchone()
+
+
+    data = {
+        'total': count_all[0],
+    }
+
+    DBConn.close()
+
+    return json.dumps(data)
+
 if __name__ == "__main__":
     app.run(port=8080)
+
