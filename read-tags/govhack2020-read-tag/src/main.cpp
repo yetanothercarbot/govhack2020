@@ -12,7 +12,7 @@
 #define WIFI_PASS  "your-password"
 #endif
 
-#define SERVER "http://ec2-3-106-166-215.ap-southeast-2.compute.amazonaws.com:8080"
+#define SERVER "http://ec2-3-106-166-215.ap-southeast-2.compute.amazonaws.com:8080/sensor"
 
 uint32_t currentTime = 0;
 int lastSync = 0; 
