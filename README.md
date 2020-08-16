@@ -3,7 +3,7 @@
 Our project uses IoT devices to track plastic waste. It comprises of three main parts - an AWS EC2 Instance, smart labels and readers in waterways.
 
 # AWS EC2 Instance
-Aravind do this bit please lol
+The EC2 instance is running a REST api developed in python using Flask. When the scanners read a tag, the information is posted to the EC2 instance as CSV. The API then stores this information into the database, after performing conversions a time conversion from epoch to a normal representation of time. All the sensors can update their epoch clock to match the server by performing a GET request. Additionally, the API also can read information from a mobile phone application which is still in the concept stage. Another feature that could be added into this API is a request for the data which can then be used for visulizations and other types of analysis.
 
 # Smart Labels
 The requirements for the labels are relatively low. In the proof of concept, NTAG213 stickers were used. These run at 13.56MHz and 144 bytes of user memory. However, in practise, lower frequency tags would likely be better for improved range and object penetration without increasing power. Tags with less user memory could be used to reduce cost of the smart labels.
