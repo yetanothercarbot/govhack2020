@@ -20,6 +20,13 @@ m_app_data = ['date', 'time', 'type_of_plastic', 'Longitude', 'Latitude']
 LOGF = open("log.txt", 'w')
 app = Flask(__name__)
 
+# Add CORS for api
+@app.after_request
+def after_request(response):
+    header = response.headers
+    header['Access-Control-Allow-Origin'] = '*'
+    return response
+
 @app.route('/sensor', methods=('GET', 'POST'))
 def received_sensor():
     if request.method == "POST":
