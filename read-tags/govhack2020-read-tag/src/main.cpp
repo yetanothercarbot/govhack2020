@@ -12,6 +12,8 @@
 #define WIFI_PASS  "your-password"
 #endif
 
+#define PN532_IRQ   D5
+#define PN532_RESET D6 
 #define SERVER "http://ec2-3-106-166-215.ap-southeast-2.compute.amazonaws.com:8080/sensor"
 
 uint32_t currentTime = 0;
@@ -28,21 +30,20 @@ struct tagData {
 };
 
 
-
-#define PN532_IRQ   (D5)
-#define PN532_RESET (D6) 
 Adafruit_PN532 nfc(PN532_IRQ, PN532_RESET);
 ESP8266WiFiMulti WiFiMulti;
 
 struct tagData datum1;
-#define ledActive LOW; // NodeMCU LEDs are active low
+#define ledActive HIGH; // NodeMCU LEDs are active low but external ones are ofc active high
 bool ledStatus = !ledActive;
-#define ledPin D0
+#define ledPin D7
+#define ledPin_2 D8 
 
 void updateTime();
 
 void setup(void) {
-  pinMode(ledPin, ledStatus);
+  pinMode(ledPin, OUTPUT);
+  pinMode(ledPin_2, OUTPUT);
 
   Serial.begin(115200);
   while (!Serial) {}
@@ -103,6 +104,7 @@ void loop(void) {
   success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);
   
   if (success) {
+    digitalWrite(ledPin_2, HIGH);
     // Display some basic information about the card
     Serial.println("Found an ISO14443A card");
     Serial.print("  UID Length: ");Serial.print(uidLength, DEC);Serial.println(" bytes");
@@ -157,11 +159,12 @@ void loop(void) {
         }
       }
       http.end();
+      delay(250);
     }
     else {
       Serial.println("This doesn't seem to be an NTAG203 tag (UUID length != 7 bytes)!");
     }
-    delay(250);
+    digitalWrite(ledPin_2, LOW);
   }
   if(millis() - lastUpdate > 1000) {
     currentTime++;
