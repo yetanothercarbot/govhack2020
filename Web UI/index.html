@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+
+    <title>Web UI</title>
+    <meta name="description" content="Web UI">
+    <link rel="stylesheet" href="css/styles.css?v=1.0">
+
+    <style>
+       /* Set the size of the div element that contains the map */
+      #map {
+        height: 1000px;  /* The height is 400 pixels */
+        width: 100%;  /* The width is the width of the web page */
+       }
+    </style>
+</head>
+<body>
+    <h1>Total Garbage Scanned: <a id='totalcount'>0</a></h1>
+    <div id="map"></div>
+    <script>
+        function initMap() {
+            var map = new google.maps.Map(
+                document.getElementById('map'), {zoom: 3, center: {lat: 0, lng: 0}});
+
+            function callback(data) {
+                var obj = JSON.parse(data)
+
+                obj.forEach(function (item, index) {
+                    var marker = new google.maps.Marker({position: {lat: parseFloat(item[2]), lng: parseFloat(item[1])}, map: map})
+                })
+            }
+
+            httpGetAsync("http://ec2-3-106-166-215.ap-southeast-2.compute.amazonaws.com:8080/sensorlist", callback)
+        }
+
+        function httpGetAsync(theUrl, callback) {
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.onreadystatechange = function() {
+                if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+                    callback(xmlHttp.responseText);
+            }
+            xmlHttp.open("GET", theUrl, true); // true for asynchronous
+            xmlHttp.send(null);
+        }
+
+        function pushNewStats(data) {
+            var obj = JSON.parse(data)
+
+            document.getElementById("totalcount").innerHTML = obj['total']
+        }
+
+        httpGetAsync("http://ec2-3-106-166-215.ap-southeast-2.compute.amazonaws.com:8080/api_overall", pushNewStats)
+
+    </script>
+
+    <script defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAptKnloOnry0oFCGiWhfx35zS-j6DBZO4&callback=initMap">
+    </script>
+</body>
+</html>
